@@ -21,3 +21,14 @@
 
 *Using 10-fold CV*
 
+## Instruction
+
+See Instructions.md
+
+## Usage
+
+```sh
+$ python main.py -k 10 --max_depth 3 --n_estimators 100 --subsample 1.0 -l data\labels\orange_small_train_upselling.labels
+$ python main.py -k 10 --max_depth 3 --n_estimators 100 --subsample 1.0 -l data\labels\orange_small_train_churn.labels
+$ python main.py -k 10 --max_depth 3 --n_estimators 100 --subsample 0.9 -l data\labels\orange_small_train_appetency.labels
+```
