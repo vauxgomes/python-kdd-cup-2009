@@ -7,8 +7,6 @@
 import argparse
 import numpy as np
 import pandas as pd
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 
 # Classifiers
 from xgboost import XGBClassifier
@@ -17,7 +15,6 @@ from xgboost import XGBClassifier
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
-# from sklearn.model_selection import GridSearchCV
 
 # 
 def arg_passing():
@@ -30,7 +27,15 @@ def arg_passing():
 	parser.add_argument('-s', nargs=1, type=str, default=["\t"], help='Separator')
 	parser.add_argument('-k', nargs=1, type=float, default=[10], help='Number of folds / Test Split Percentange')
 
+	parser.add_argument('-p', nargs=1, type=float, help='Exclude null percentange columns')
 	parser.add_argument('-e', action='store_true', help='Exclude object columns')
+
+	# XGBoost arguments
+	parser.add_argument('--max_depth', nargs=1, type=int, default=[3], help='XGBoost.max_depth')
+	parser.add_argument('--n_estimators', nargs=1, type=int, default=[100], help='XGBoost.n_estimators')
+	parser.add_argument('--subsample', nargs=1, type=float, default=[1], help='XGBoost.subsample')
+
+	#
 	return parser.parse_args()
 
 #
@@ -57,13 +62,27 @@ if __name__ == '__main__':
 		obj_columns = X_data.select_dtypes(include=['object']).columns
 		X_data[obj_columns] = X_data[obj_columns].astype('category').apply(lambda x: x.cat.codes)
 
+		if args.p is not None:
+			total = len(X_data)
+			drop_cols = []
+
+			for i in obj_columns:
+				if len(X_data[X_data[i] == -1])/total > args.p[0]:
+					drop_cols.append(i)
+
+			X_data.drop(drop_cols, axis=1, inplace=True)
+
 	# Classifier
-	classifier = XGBClassifier()
+	classifier = XGBClassifier(
+		max_depth=args.max_depth[0], 
+		n_estimators=args.n_estimators[0], 
+		subsample=args.subsample[0])
 
 	# Split
 	if split < 1.0:
-		X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=split, random_state=1)
+		print('Running {0} split evaluation'.format(split))
 
+		X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=split, random_state=1)
 		classifier.fit(X_train, y_train.values.ravel())
 		
 		score = classifier.score(X_test, y_test)
@@ -75,6 +94,8 @@ if __name__ == '__main__':
 
 	# K-fold
 	else:
+		print('Running {0} fold(s) cross-validation'.format(int(split)))
+
 		k_fold = KFold(int(split))
 		aucs, scores = [], []
 
