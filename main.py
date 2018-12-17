@@ -27,8 +27,8 @@ def arg_passing():
 	parser.add_argument('-s', nargs=1, type=str, default=["\t"], help='Separator')
 	parser.add_argument('-k', nargs=1, type=float, default=[10], help='Number of folds / Test Split Percentange')
 
-	parser.add_argument('-p', nargs=1, type=float, help='Exclude null percentange columns')
-	parser.add_argument('-e', action='store_true', help='Exclude object columns')
+	parser.add_argument('-p', nargs=1, type=float, help='Exclude nominal with x null percentange columns')
+	parser.add_argument('-e', action='store_true', help='Exclude nominal columns')
 
 	# XGBoost arguments
 	parser.add_argument('--max_depth', nargs=1, type=int, default=[3], help='XGBoost.max_depth')
@@ -58,6 +58,7 @@ if __name__ == '__main__':
 
 	if args.e:
 		X_data = X_data.select_dtypes(exclude=['object'])
+		print('Dropped all nominal columns')
 	else:
 		obj_columns = X_data.select_dtypes(include=['object']).columns
 		X_data[obj_columns] = X_data[obj_columns].astype('category').apply(lambda x: x.cat.codes)
@@ -71,6 +72,7 @@ if __name__ == '__main__':
 					drop_cols.append(i)
 
 			X_data.drop(drop_cols, axis=1, inplace=True)
+			print('Dropped {0} nominal columns. Percentage {1}'.format(len(drop_cols), args.p[0]))
 
 	# Classifier
 	classifier = XGBClassifier(
@@ -87,17 +89,16 @@ if __name__ == '__main__':
 		
 		score = classifier.score(X_test, y_test)
 		y_hat = classifier.predict(X_test)
-		fp, tp, _ = metrics.roc_curve(y_test, y_hat, pos_label=1)
 
-		print('Split {0}, Score: {1}, AUC: {2}'.format(
-			split, score, metrics.auc(fp, tp)))
+		print('Split {0}, Score: {1}, ROC_AUC: {2}'.format(
+			split, score, metrics.roc_auc_score(y_test, y_hat)))
 
 	# K-fold
 	else:
 		print('Running {0} fold(s) cross-validation'.format(int(split)))
 
 		k_fold = KFold(int(split))
-		aucs, scores = [], []
+		rocs, scores = [], []
 
 		for k, (train, test) in enumerate(k_fold.split(X_data, y_data)):
 			X_train, y_train = X_data.iloc[train], y_data.iloc[train]
@@ -105,16 +106,15 @@ if __name__ == '__main__':
 
 			classifier.fit(X_train, y_train.values.ravel())
 
-			y_hat = classifier.predict(X_test)
-			fp, tp, _ = metrics.roc_curve(y_test, y_hat, pos_label=1)
 			score = classifier.score(X_test, y_test)
-			auc = metrics.auc(fp, tp)
+			y_hat = classifier.predict(X_test)
+			roc = metrics.roc_auc_score(y_test, y_hat)
 
 			scores.append(score)
-			aucs.append(auc)
+			rocs.append(roc)
 
-			print('Fold {0}, Score: {1}, AUC: {2}'. format(
-				k, score, auc))
+			print('Fold {0}, Score: {1}, ROC_AUC: {2}'. format(
+				k + 1, score, roc))
 
 		print('-')
-		print('Score: {0}, AUC: {1}'.format(np.array(score).mean(), np.array(aucs).mean()))
+		print('Score: {0}, ROC_AUC: {1}'.format(np.mean(score), np.mean(rocs)))
