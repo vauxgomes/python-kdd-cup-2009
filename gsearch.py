@@ -16,7 +16,8 @@ def gsearch(X_data, y_data):
 		'max_depth': [3, 5],
 		'n_estimators': [50, 100, 300],
 		'nthread': [8],
-		'subsample': [0.7, 0.8, 0.9, 1.0]
+		'subsample': [0.7, 0.8, 0.9, 1.0],
+		'gamma': [0, 0.1, 0.01, 0.001]
 	}
 
 	grid = GridSearchCV(XGBClassifier(), param_grid, refit=True, verbose=3, scoring='roc_auc', n_jobs=4)

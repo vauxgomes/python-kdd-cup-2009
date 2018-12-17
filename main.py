@@ -34,6 +34,7 @@ def arg_passing():
 	parser.add_argument('--max_depth', nargs=1, type=int, default=[3], help='XGBoost.max_depth')
 	parser.add_argument('--n_estimators', nargs=1, type=int, default=[100], help='XGBoost.n_estimators')
 	parser.add_argument('--subsample', nargs=1, type=float, default=[1], help='XGBoost.subsample')
+	parser.add_argument('--gamma', nargs=1, type=float, default=[0], help='XGBoost.gamma')
 
 	#
 	return parser.parse_args()
@@ -68,7 +69,7 @@ if __name__ == '__main__':
 			drop_cols = []
 
 			for i in obj_columns:
-				if len(X_data[X_data[i] == -1])/total > args.p[0]:
+				if len(X_data[X_data[i] == 0]) / total > args.p[0]:
 					drop_cols.append(i)
 
 			X_data.drop(drop_cols, axis=1, inplace=True)
@@ -78,7 +79,8 @@ if __name__ == '__main__':
 	classifier = XGBClassifier(
 		max_depth=args.max_depth[0], 
 		n_estimators=args.n_estimators[0], 
-		subsample=args.subsample[0])
+		subsample=args.subsample[0],
+		gamma=args.gamma[0])
 
 	# Split
 	if split < 1.0:
